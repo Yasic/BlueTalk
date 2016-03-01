@@ -6,36 +6,56 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="7dp"
-        android:layout_marginBottom="7dp"
-        android:layout_marginLeft="16dp"
-        android:layout_marginRight="16dp">
-        <Button
-            android:id="@+id/bt_postmessage"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentRight="true"
-            android:layout_marginLeft="7dp"
-            android:text="post"
-            android:textAllCaps="false"
-            />
-        <EditText
-            android:id="@+id/et_massageinput"
+        android:layout_marginTop="0dp"
+        >
+        <RelativeLayout
+            android:id="@+id/rl_postmessage"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="54dp"
             android:layout_alignParentBottom="true"
-            android:layout_toLeftOf="@id/bt_postmessage"
-            android:textSize="14sp"/>
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_alignParentTop="true">
+            android:background="@color/colorLightGrey"
+            >
             <Button
-                android:id="@+id/bt_logout"
+                android:id="@+id/bt_postmessage"
+                android:layout_width="54dp"
+                android:layout_height="match_parent"
+                android:layout_alignParentBottom="true"
+                android:layout_alignParentRight="true"
+                android:layout_marginLeft="7dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp"
+                android:layout_marginRight="7dp"
+                android:textAllCaps="false"
+                android:gravity="center"
+                android:background="@drawable/ic_send_black_48dp"
+                />
+            <EditText
+                android:id="@+id/et_massageinput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="logout"/>
+                android:layout_alignParentBottom="true"
+                android:layout_toLeftOf="@id/bt_postmessage"
+                android:textSize="14sp"
+                android:layout_marginLeft="4dp"
+                android:layout_marginBottom="4dp"/>
+        </RelativeLayout>
+        <LinearLayout
+            android:layout_above="@+id/rl_postmessage"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:layout_alignParentTop="true">
+            <TextView
+                android:id="@+id/tv_emptymessage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:layout_marginTop="7dp"/>
+            <android.support.v7.widget.RecyclerView
+                android:id="@+id/rv_messagelist"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+            </android.support.v7.widget.RecyclerView>
         </LinearLayout>
         </RelativeLayout>
 </LinearLayout>

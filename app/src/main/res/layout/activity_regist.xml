@@ -22,8 +22,10 @@
             android:textAllCaps="false"
             android:gravity="center"/>
         <EditText
+            android:id="@+id/et_nickname"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:maxLength="8"
             android:singleLine="true" />
     </LinearLayout>
     <LinearLayout
@@ -43,9 +45,11 @@
             android:textAllCaps="false"
             android:gravity="center"/>
         <EditText
+            android:id="@+id/et_email"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:singleLine="true" />
+            android:singleLine="true"
+            android:inputType="textEmailAddress"/>
     </LinearLayout>
     <LinearLayout
         android:layout_width="match_parent"
@@ -64,9 +68,12 @@
             android:textAllCaps="false"
             android:gravity="center"/>
         <EditText
+            android:id="@+id/et_password"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:singleLine="true" />
+            android:singleLine="true"
+            android:maxLength="16"
+            android:inputType="textPassword"/>
     </LinearLayout>
     <LinearLayout
         android:layout_width="match_parent"
@@ -85,9 +92,12 @@
             android:textAllCaps="false"
             android:gravity="center"/>
         <EditText
+            android:id="@+id/et_passwordagain"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:singleLine="true" />
+            android:singleLine="true"
+            android:maxLength="16"
+            android:inputType="textPassword"/>
     </LinearLayout>
     <LinearLayout
         android:layout_width="match_parent"
@@ -96,6 +106,7 @@
         android:layout_marginLeft="48dp"
         android:layout_marginRight="48dp">
         <com.gc.materialdesign.views.ButtonRectangle
+            android:id="@+id/btr_regist"
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:text="Regist"
