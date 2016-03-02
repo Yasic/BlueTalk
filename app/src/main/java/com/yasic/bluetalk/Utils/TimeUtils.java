@@ -91,7 +91,7 @@ public class TimeUtils {
     }
 
     public static String getCurrentDateAndTime(){
-        return getNowYear()+"/"+getNowMonth()+"/"+getNowDay()+"/ "+getNowHour()+":"+getNowMinute()+":"+getNowSecond();
+        return getNowYear()+"/"+getNowMonth()+"/"+getNowDay()+" "+getNowHour()+":"+getNowMinute()+":"+getNowSecond();
     }
 
     /**

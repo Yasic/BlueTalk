@@ -120,6 +120,6 @@ public class Message implements Comparable{
 
     @Override
     public int compareTo(Object another) {
-        return this.getSendTime().compareTo(((Message)another).getSendTime());
+        return -this.getSendTime().compareTo(((Message)another).getSendTime());
     }
 }

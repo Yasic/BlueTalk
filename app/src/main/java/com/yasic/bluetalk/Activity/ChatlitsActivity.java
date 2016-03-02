@@ -14,12 +14,25 @@ import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 
+import com.avos.avoscloud.AVException;
+import com.avos.avoscloud.AVObject;
+import com.avos.avoscloud.SaveCallback;
+import com.avos.avoscloud.im.v2.AVIMClient;
+import com.avos.avoscloud.im.v2.AVIMException;
+import com.avos.avoscloud.im.v2.AVIMMessageManager;
+import com.avos.avoscloud.im.v2.callback.AVIMClientCallback;
 import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.PersistentCookieStore;
+import com.tencent.android.tpush.XGIOperateCallback;
+import com.tencent.android.tpush.XGPushManager;
 import com.yasic.bluetalk.Adapters.ChatListAdapter;
 import com.yasic.bluetalk.Adapters.MyLinearLayoutManager;
+import com.yasic.bluetalk.Adapters.SearchResultAdapter;
+import com.yasic.bluetalk.Applications.MyApplication;
+import com.yasic.bluetalk.Applications.MyApplication.CustomMessageHandler;
 import com.yasic.bluetalk.Object.BlueTalkUser;
 import com.yasic.bluetalk.R;
 import com.yasic.bluetalk.Utils.AsyncHttpUtils;
@@ -65,8 +78,6 @@ public class ChatlitsActivity extends AppCompatActivity {
         init();
         initFAB();
         initRecyclerview();
-        blueTalkUserList = getBlueTalkUserList();
-        chatListAdapter.refresh(blueTalkUserList);
     }
 
     private void init() {
@@ -78,6 +89,18 @@ public class ChatlitsActivity extends AppCompatActivity {
         client = new AsyncHttpClient();
         cookieStore = new PersistentCookieStore(getApplicationContext());
         client.setCookieStore(AsyncHttpUtils.getUtilsInstance().getCookieStoreInstance());
+        XGPushManager.registerPush(ChatlitsActivity.this, UserUtils.getLocalUsrAccount(),
+                new XGIOperateCallback() {
+                    @Override
+                    public void onSuccess(Object data, int flag) {
+                        Log.d("TPush", "注册成功，设备token为：" + data);
+                    }
+
+                    @Override
+                    public void onFail(Object data, int errCode, String msg) {
+                        Log.d("TPush", "注册失败，错误码：" + errCode + ",错误信息：" + msg);
+                    }
+                });
     }
 
     /**
@@ -93,15 +116,31 @@ public class ChatlitsActivity extends AppCompatActivity {
         });
     }
 
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void initRecyclerview(){
         rvChatList = (RecyclerView)findViewById(R.id.rv_chatlist);
         chatListAdapter = new ChatListAdapter(this,blueTalkUserList);
         rvChatList.setLayoutManager(new MyLinearLayoutManager(this, LinearLayoutManager.VERTICAL, true));
         rvChatList.setAdapter(chatListAdapter);
         rvChatList.setItemAnimator(new DefaultItemAnimator());
-        rvChatList.setNestedScrollingEnabled(false);
-        //rvChatList.setLayoutManager(new LinearLayoutManager(this));
+        blueTalkUserList = getBlueTalkUserList();
+        chatListAdapter.refresh(blueTalkUserList);
+        chatListAdapter.setOnItemClickListener(new ChatListAdapter.OnItemClickListener() {
+            @Override
+            public void onItemClick(View v, int position) {
+                Intent intent = new Intent(ChatlitsActivity.this, SingleMessageInterface.class);
+                Bundle bundle = new Bundle();
+                bundle.putString("chaterAccount",blueTalkUserList.get(position).getEmailAddress());
+                bundle.putString("localAccount", UserUtils.getLocalUsrAccount());
+                bundle.putString("chaterNickName",blueTalkUserList.get(position).getNickName());
+                intent.putExtras(bundle);
+                startActivity(intent);
+            }
+
+            @Override
+            public void onItemLongCick(View v, int position) {
+
+            }
+        });
     }
 
     public List<BlueTalkUser> getBlueTalkUserList() {

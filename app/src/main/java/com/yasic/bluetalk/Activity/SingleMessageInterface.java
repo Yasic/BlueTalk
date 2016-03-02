@@ -4,6 +4,8 @@ import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
@@ -15,6 +17,13 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.avos.avoscloud.im.v2.AVIMClient;
+import com.avos.avoscloud.im.v2.AVIMConversation;
+import com.avos.avoscloud.im.v2.AVIMException;
+import com.avos.avoscloud.im.v2.callback.AVIMClientCallback;
+import com.avos.avoscloud.im.v2.callback.AVIMConversationCallback;
+import com.avos.avoscloud.im.v2.callback.AVIMConversationCreatedCallback;
+import com.avos.avoscloud.im.v2.messages.AVIMTextMessage;
 import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.loopj.android.http.JsonHttpResponseHandler;
@@ -24,24 +33,28 @@ import com.tencent.android.tpush.XGPushConfig;
 import com.yasic.bluetalk.Adapters.ChatListAdapter;
 import com.yasic.bluetalk.Adapters.MessageAdapter;
 import com.yasic.bluetalk.Object.BlueTalkUser;
-import com.yasic.bluetalk.Object.Message;
 import com.yasic.bluetalk.R;
 import com.yasic.bluetalk.Utils.AsyncHttpUtils;
 import com.yasic.bluetalk.Utils.ChatListSQLiteUtils;
+import com.yasic.bluetalk.Utils.MessageSQLiteUtils;
 import com.yasic.bluetalk.Utils.TimeUtils;
 import com.yasic.bluetalk.Utils.UserUtils;
-
+//import com.yasic.bluetalk.Object.Message;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.net.ContentHandler;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import cz.msebera.android.httpclient.Header;
+import cz.msebera.android.httpclient.conn.ConnectTimeoutException;
 
 /**
  * Created by ESIR on 2016/2/24.
@@ -66,7 +79,7 @@ public class SingleMessageInterface extends AppCompatActivity{
     /**
      * 消息列表
      */
-    private List<Message> messageList = new ArrayList<Message>();
+    private List<com.yasic.bluetalk.Object.Message> messageList = new ArrayList<com.yasic.bluetalk.Object.Message>();
 
     /**
      * 对方账号
@@ -113,6 +126,45 @@ public class SingleMessageInterface extends AppCompatActivity{
      */
     private String sendTime;
 
+    /**
+     * 控制时间
+     */
+    private Timer timer = new Timer();
+
+    /**
+     * 是否获取数据超时
+     */
+    private boolean isGetDataTimeOut = true;
+
+    /**
+     * 是否发送消息超时
+     */
+    private boolean isSendMessageTimeOut = true;
+
+    private Handler handler = new Handler(){
+        public void handleMessage(android.os.Message msg) {
+            switch (msg.what) {
+                case 1://getdata timeout error
+                    if (isGetDataTimeOut){
+                        Toast.makeText(getApplicationContext(), R.string.Timeouterror,Toast.LENGTH_LONG).show();
+                    }
+                    isGetDataTimeOut = true;
+                    btPostMessage.setClickable(true);
+                    btPostMessage.setAlpha(1f);
+                    break;
+                case 2://sendmessage timeout error
+                    if (isSendMessageTimeOut){
+                        Toast.makeText(getApplicationContext(), R.string.Timeouterror,Toast.LENGTH_LONG).show();
+                    }
+                    isSendMessageTimeOut = true;
+                    btPostMessage.setClickable(true);
+                    btPostMessage.setAlpha(1f);
+                    break;
+            }
+            super.handleMessage(msg);
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -120,8 +172,8 @@ public class SingleMessageInterface extends AppCompatActivity{
         getInfo();
         initRecyclerView();
         initAsyncHttp();
-        getMessageData();
         setSendFunction();
+        getMessageData();
     }
 
     private void getInfo(){
@@ -139,7 +191,7 @@ public class SingleMessageInterface extends AppCompatActivity{
 
     private void initRecyclerView() {
         rvMessageList = (RecyclerView)findViewById(R.id.rv_messagelist);
-        rvMessageList.setLayoutManager(new LinearLayoutManager(this));
+        rvMessageList.setLayoutManager(new LinearLayoutManager(this,LinearLayoutManager.VERTICAL,true));
         rvMessageList.setItemAnimator(new DefaultItemAnimator());
         messageAdapter = new MessageAdapter(this, messageList, localAccount);
         rvMessageList.setAdapter(messageAdapter);
@@ -155,6 +207,7 @@ public class SingleMessageInterface extends AppCompatActivity{
             @Override
             public void onClick(View v) {
                 messange = etMassageInput.getText().toString();
+                sendTime = TimeUtils.getCurrentDateAndTime();
                 if (messange.equals("")) {
                     Toast.makeText(SingleMessageInterface.this, "You may forget to write message..", Toast.LENGTH_SHORT).show();
                     return;
@@ -167,19 +220,30 @@ public class SingleMessageInterface extends AppCompatActivity{
                 params.put("posterNickName", UserUtils.getLocalUsrNickName());
                 params.put("receiverNickName", chaterNickName);
                 params.put("message", messange);
-                sendTime = TimeUtils.getCurrentDateAndTime();
                 params.put("releasedate", sendTime);
                 Log.i("releasetime", TimeUtils.getCurrentDateAndTime());
+
+                TimerTask timerTask = new TimerTask() {
+                    @Override
+                    public void run() {
+                        android.os.Message message = new android.os.Message();
+                        message.what = 2;
+                        handler.sendMessage(message);
+                        isSendMessageTimeOut = true;
+                    }
+                };
+                timer.schedule(timerTask,12000);
                 client.post("http://45.78.59.95/sendmessage", params, new JsonHttpResponseHandler() {
                     @Override
                     public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                        isSendMessageTimeOut = false;
                         try {
                             String CODE = response.get("CODE").toString();
                             String MESSAGE = response.get("MESSAGE").toString();
                             switch (CODE) {
                                 case "8":
                                     Log.i("MESSAGE", response.get("MESSAGE").toString());
-                                    messageList.add(new Message(
+                                    messageList.add(new com.yasic.bluetalk.Object.Message(
                                             UserUtils.getLocalUsrAccount(),
                                             UserUtils.getLocalUsrNickName(),
                                             chaterAccount,
@@ -220,8 +284,8 @@ public class SingleMessageInterface extends AppCompatActivity{
                         btPostMessage.setClickable(true);
                         btPostMessage.setAlpha(1f);
                     }
-                });
 
+                });
             }
         });
     }
@@ -230,16 +294,32 @@ public class SingleMessageInterface extends AppCompatActivity{
         client = new AsyncHttpClient();
         cookieStore = new PersistentCookieStore(getApplicationContext());
         client.setCookieStore(AsyncHttpUtils.getUtilsInstance().getCookieStoreInstance());
+        client.setTimeout(12000);
     }
 
-    private List<Message> getMessageData() {
-        final List<Message> messages = new ArrayList<Message>();
+    private List<com.yasic.bluetalk.Object.Message> getMessageData() {
+        btPostMessage.setClickable(false);
+        btPostMessage.setAlpha(0.3f);
+        final List<com.yasic.bluetalk.Object.Message> messages = new ArrayList<com.yasic.bluetalk.Object.Message>();
         RequestParams params = new RequestParams();
-        params.put("LocalAccount",localAccount);
+        params.put("LocalAccount", localAccount);
         params.put("ChaterAccount", chaterAccount);
+
+        TimerTask timerTask = new TimerTask() {
+            @Override
+            public void run() {
+                Message message = new Message();
+                message.what = 1;
+                handler.sendMessage(message);
+            }
+        };
+        timer.schedule(timerTask,12000);
         client.post("http://45.78.59.95/searchmsg", params, new JsonHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                btPostMessage.setClickable(true);
+                btPostMessage.setAlpha(1f);
+                isGetDataTimeOut = false;
                 try {
                     String CODE = response.get("CODE").toString();
                     String MESSAGE = response.get("MESSAGE").toString();
@@ -254,7 +334,7 @@ public class SingleMessageInterface extends AppCompatActivity{
                                 String geterNickName = MESSAGEJSON.get(i + 3 + "") + "";
                                 String message = MESSAGEJSON.get(i + 4 + "") + "";
                                 String sendTime = MESSAGEJSON.get(i + 5 + "") + "";
-                                messageList.add(new Message(posterAccount, posterNickName, geterAccount, geterNickName, message, sendTime));
+                                messageList.add(new com.yasic.bluetalk.Object.Message(posterAccount, posterNickName, geterAccount, geterNickName, message, sendTime));
                             }
                             if (messageList.size() == 0) {
                                 tvEmptyMessage.setVisibility(View.VISIBLE);
@@ -297,12 +377,12 @@ public class SingleMessageInterface extends AppCompatActivity{
         return messages;
     }
 
-    private void addMessageItem(List<Message> messages){
+    private void addMessageItem(List<com.yasic.bluetalk.Object.Message> messages){
         messageAdapter.refresh(messages);
         rvMessageList.smoothScrollToPosition(messageAdapter.getItemCount());
     }
 
-    private void updateChatListDB(List<Message> messageList){
+    private void updateChatListDB(List<com.yasic.bluetalk.Object.Message> messageList){
         ChatListSQLiteUtils chatListSQLiteUtils = new ChatListSQLiteUtils(this, "ChatList", 1);
         Cursor cursor = chatListSQLiteUtils.getReadableDatabase().query("ChatItem",
                 null, "ACCOUNT = ? and LOCALACCOUNT = ?",
@@ -322,12 +402,24 @@ public class SingleMessageInterface extends AppCompatActivity{
             ContentValues values = new ContentValues();
             values.put("NICKNAME",chaterNickName);
             values.put("ACCOUNT",chaterAccount);
-            values.put("MESSAGE", messageList.get(messageAdapter.getItemCount()-1).getMessageData());
-            values.put("MESSAGETIME", messageList.get(messageAdapter.getItemCount() - 1).getSendTime());
+            values.put("MESSAGE", "");
+            values.put("MESSAGETIME", "");
             chatListSQLiteUtils.getReadableDatabase().update("ChatItem",
                     values, "ACCOUNT = ? and LOCALACCOUNT = ?",
                     new String[]{chaterAccount, UserUtils.getLocalUsrAccount()});
         }
         cursor.close();
+    }
+
+    private void updateMessageDB(String messange){
+        MessageSQLiteUtils messageSQLiteUtils = new MessageSQLiteUtils(this, "MessageList", 1);
+        ContentValues values = new ContentValues();
+        values.put("NICKNAME",chaterNickName);
+        values.put("ACCOUNT",chaterAccount);
+        values.put("MESSAGE", messange);
+        values.put("MESSAGETIME", sendTime);
+        values.put("LOCALACCOUNT", UserUtils.getLocalUsrAccount());
+        messageSQLiteUtils.getReadableDatabase().insert("MessageItem",null,values);
+
     }
 }
